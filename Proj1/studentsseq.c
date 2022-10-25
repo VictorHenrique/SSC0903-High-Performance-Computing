@@ -1,18 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 
 #define BUCKET_LEN 101
 
 typedef struct _cities {
     int *grade_frequencies; // per city
-    double mean;
+    double mean, sd, median;
+    int min, max;
 } CITIES;
 
 typedef struct _region {
     CITIES *city;
     int *grade_frequencies; // per region
-    double mean;
+    double mean, sd, median;
+    int min, max;
 } REGIONS;
 
 
@@ -86,6 +89,37 @@ REGIONS *initialize_regions(int R, int C) {
     return br;
 }
 
+/* Prints */
+void print_cities(REGIONS *brazil, int R, int C) {
+    for (int i = 0; i < R; i++) {
+        for (int j = 0; j < C; j++) {
+            printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n",
+                i, j, 
+                brazil[i].city[j].min,  
+                brazil[i].city[j].max, 
+                brazil[i].city[j].median, 
+                brazil[i].city[j].mean, 
+                brazil[i].city[j].sd
+            );
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_regions(REGIONS *brazil, int R) {
+    for (int i = 0; i < R; i++) {
+        printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", 
+            i, brazil[i].min, 
+            brazil[i].max, 
+            brazil[i].median, 
+            brazil[i].mean, 
+            brazil[i].sd
+        );
+    }
+    printf("\n");
+}
+
 /* Liberando a memória */
 void free_memory(REGIONS *arr, int R, int C, int A) {
     for (int i = 0; i < R; i++) {
@@ -109,20 +143,19 @@ int main() {
 
     /* Prints por cidade de regiao */
     REGIONS *brazil = initialize_regions(R, C);
+
+    double seq_start = omp_get_wtime();
     for (int i = 0; i < R; i++) {
         for (int j = 0; j < C; j++) {
             // (i * C * A) + (j * A) = primeira pos da regiao + primeira posicao da cidade dentro da regiao
             int region_start = A * (i * C + j); 
             counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1);
 
-            int min = grades[region_start];
-            int max = grades[region_start + A - 1];
-
-            double median = grades_median(grades, region_start, A);
+            brazil[i].city[j].min = grades[region_start];
+            brazil[i].city[j].max = grades[region_start + A - 1];
+            brazil[i].city[j].median = grades_median(grades, region_start, A);
             brazil[i].city[j].mean = mean(brazil[i].city[j].grade_frequencies, A); 
-            double sd = standard_deviation(brazil[i].city[j].grade_frequencies, brazil[i].city[j].mean, A);
-
-            printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, j, min, max, median, brazil[i].city[j].mean, sd);
+            brazil[i].city[j].sd = standard_deviation(brazil[i].city[j].grade_frequencies, brazil[i].city[j].mean, A);
 
             if (brazil[i].city[j].mean > best_city[2]) {
                 best_city[0] = i;
@@ -130,11 +163,9 @@ int main() {
                 best_city[2] = brazil[i].city[j].mean;
             }
         }
-        printf("\n");
     }
-    
+
     /* Print por regiao */
-    printf("\n");
     for (int i = 0; i < R; i++) {
         brazil[i].mean = 0;
         for (int j = 0; j < C; j++) {
@@ -146,11 +177,12 @@ int main() {
         int region_start = i * C * A, region_end = region_start - 1 + (C * A);
         sort_from_bucket(grades, brazil[i].grade_frequencies, region_start, region_end);
 
-        int min = grades[region_start], max = grades[region_end];
-        double median = grades_median(grades, region_start, C*A);            
-        double sd = standard_deviation(brazil[i].grade_frequencies, brazil[i].mean, C*A);
+        brazil[i].min = grades[region_start];
+        brazil[i].max = grades[region_end];
+        brazil[i].median = grades_median(grades, region_start, C*A);            
+        brazil[i].sd = standard_deviation(brazil[i].grade_frequencies, brazil[i].mean, C*A);
 
-        printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, min, max, median, brazil[i].mean, sd);
+        // printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, min, max, median, brazil[i].mean, sd);
 
         if (brazil[i].mean > best_region[1]) {
             best_region[0] = i;
@@ -159,7 +191,6 @@ int main() {
     }   
 
     /* Print do Brasil */
-    printf("\n");
     double mean = 0;
     int bucket[BUCKET_LEN] = {0};
     for (int i = 0; i < R; i++) 
@@ -171,11 +202,18 @@ int main() {
     double median = grades_median(grades, 0, R * C * A);
     double sd = standard_deviation(bucket, mean, R*C*A);
 
-    printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f", min, max, median, mean, sd);
+    double seq_end = omp_get_wtime();
+    
+    // print_cities(brazil, R, C);
+    // print_regions(brazil, R);
+
+    printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n\n", min, max, median, mean, sd);
 
     /* Melhor cidade e melhor regiao */
-    printf("\n\n");
     printf("Melhor região: Região %.0f\nMelhor cidade: Região %.0f, Cidade %.0f\n", best_region[0], best_city[0], best_city[1]);
+
+
+    printf("Tempo: %fs\n", seq_end - seq_start);
 
     free_memory(brazil, R, C, A);
     free(grades);

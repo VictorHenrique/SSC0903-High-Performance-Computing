@@ -40,20 +40,17 @@ void get_grades(int *grades, int R, int C, int A, int seed) {
 /* Counting Sort */
 void counting_sort(int *grade, int *bucket, int start, int end, int A, int C, int R) {
 
-    int i;
-    #pragma omp parallel for private(i) reduction(+: bucket[:BUCKET_LEN]) 
-    for (i = start; i <= end; i++) {
+    for (int i = start; i <= end; i++) {
         bucket[grade[i]]++;
     }
 
     int s_pos[BUCKET_LEN] = {start}, e_pos[BUCKET_LEN] = { start + bucket[0] };
-    for (i = 1; i < BUCKET_LEN; i++) {
+    for (int i = 1; i < BUCKET_LEN; i++) {
         e_pos[i] = e_pos[i-1] + bucket[i];
         s_pos[i] = e_pos[i-1];
     }
-
-    #pragma omp parallel private(i)     
-    for (i = 0; i < BUCKET_LEN; i++) {
+    
+    for (int i = 0; i < BUCKET_LEN; i++) {
         int j;
         #pragma omp simd private(j) 
         for (j = s_pos[i]; j < e_pos[i]; j++)
@@ -64,7 +61,7 @@ void counting_sort(int *grade, int *bucket, int start, int end, int A, int C, in
 
 void sort_from_bucket(int *grade, int *bucket, int *s_pos, int *e_pos) {
     int i;
-    #pragma omp parallel private(i)     
+    #pragma omp parallel for private(i)     
     for (i = 0; i < BUCKET_LEN; i++) {
         int j;
         #pragma omp simd private(j) 
@@ -77,7 +74,7 @@ void sort_from_bucket(int *grade, int *bucket, int *s_pos, int *e_pos) {
 double mean(int *grade_freq, int num_of_elems) {
     double mean = 0;
     int i;
-    #pragma omp parallel for private(i) reduction(+: mean)
+
     for (i = 0; i < BUCKET_LEN; i++)
         mean += grade_freq[i] * i;
     
@@ -87,11 +84,10 @@ double mean(int *grade_freq, int num_of_elems) {
 /* frequencia * (nota - media)^2 */
 double standard_deviation(int *bucket, double mean, int num_of_elems) {
     double sum = 0;
-    int i;
-    #pragma omp parallel for private(i) reduction(+: sum)
-    for (i = 0; i < BUCKET_LEN; i++)
-        sum += bucket[i] * pow(i - mean, 2);
-
+    for (int i = 0; i < BUCKET_LEN; i++){
+        double temp = i - mean;
+        sum += bucket[i] * (temp * temp);
+    }
     return sqrt(sum / num_of_elems);
 }
 
@@ -173,11 +169,12 @@ int main() {
 
     /* Prints por cidade de regiao */
     REGIONS *brazil = initialize_regions(R, C);
-
-    #pragma omp parallel shared(grades) 
+    
+    double par_start = omp_get_wtime();
+    #pragma omp parallel for
     for (int i = 0; i < R; i++) {
 
-        #pragma omp for 
+        #pragma omp parallel for 
         for (int j = 0; j < C; j++) {
             // (i * C * A) + (j * A) = primeira pos da regiao + primeira posicao da cidade dentro da regiao
             int region_start = (i * A * C) + (j * A); 
@@ -192,8 +189,6 @@ int main() {
         }
     }
     
-    print_cities(brazil, R, C);
-
     /* https://stackoverflow.com/questions/66664531/reducing-the-max-value-and-saving-its-index */
     #pragma omp declare reduction(best_city : struct _best_city : omp_out = omp_in.mean > omp_out.mean ? omp_in : omp_out)
     BEST_CITY best_city;
@@ -211,24 +206,29 @@ int main() {
     }  
     
     /* Print por regiao */
-    printf("\n");
-
     #pragma omp parallel for
-    for (int i = 0; i < R; i++) {
-        int *g_freq = brazil[i].grade_frequencies;
-        #pragma omp parallel for reduction(+: g_freq[:BUCKET_LEN]) 
-        for (int j = 0; j < C; j++) {
-            for (int k = 0; k < BUCKET_LEN; k++)
-                g_freq[k] += brazil[i].city[j].grade_frequencies[k];    
-        } 
+    for (int i = 0; i < R; i++) { 
 
+        #pragma omp task
+        {
         double mean = 0;
         best_city.mean = 0;    
         #pragma omp parallel for reduction(+: mean) 
         for (int j = 0; j < C; j++) 
             mean += brazil[i].city[j].mean;
         brazil[i].mean = mean / C;
+        }    
 
+        #pragma omp task 
+        {
+        int *g_freq = brazil[i].grade_frequencies;
+        #pragma omp parallel for reduction(+: g_freq[:BUCKET_LEN]) 
+        for (int j = 0; j < C; j++) {
+            for (int k = 0; k < BUCKET_LEN; k++)
+                g_freq[k] += brazil[i].city[j].grade_frequencies[k];    
+        }
+        } 
+             
         int region_start = i * C * A, region_end = region_start - 1 + (C * A);
 
         /* Definindo as posições de inserção ordenada */
@@ -257,8 +257,6 @@ int main() {
         }   
     }  
 
-    print_regions(brazil, R);
-
     /* Print do Brasil */
     double mean = 0;
     int bucket[BUCKET_LEN] = {0};
@@ -286,12 +284,18 @@ int main() {
     double median = grades_median(grades, 0, R * C * A);
     double sd = standard_deviation(bucket, mean, R*C*A);
 
-    printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f", min, max, median, mean, sd);
+    double par_end = omp_get_wtime();
+
+    // print_cities(brazil, R, C);
+    // print_regions(brazil, R);
+
+    printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n\n", min, max, median, mean, sd);
 
     /* Melhor cidade e melhor regiao */
-    printf("\n");
     printf("Melhor região: Região %d\n", best_region.r_idx);
     printf("Melhor cidade: Região %d, Cidade %d\n", best_city.r_idx, best_city.c_idx);
+
+    printf("Tempo: %fs\n", par_end - par_start);
 
     free_memory(brazil, R, C, A);
     free(grades);
