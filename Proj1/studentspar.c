@@ -14,7 +14,7 @@ typedef struct _cities {
 typedef struct _region {
     CITIES *city;
     int *grade_frequencies; // per region
-    double mean, sd;
+    double mean, sd, median;
     int min, max;
 } REGIONS;
 
@@ -56,14 +56,9 @@ void counting_sort(int *grade, int *bucket, int start, int end, int A, int C, in
     for (i = 0; i < BUCKET_LEN; i++) {
         int j;
         #pragma omp simd private(j) 
-        for (j = s_pos[i]; j < e_pos[i]; j++) {
+        for (j = s_pos[i]; j < e_pos[i]; j++)
             grade[j] = i;
-        }       
     }
-
-    for (int k = start; k <= end; k++)
-        printf("%d ", grade[k]);
-    printf("\n");
 }
 
 
@@ -122,6 +117,37 @@ REGIONS *initialize_regions(int R, int C) {
     return br;
 }
 
+/* Prints */
+void print_cities(REGIONS *brazil, int R, int C) {
+    for (int i = 0; i < R; i++) {
+        for (int j = 0; j < C; j++) {
+            printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n",
+                i, j, 
+                brazil[i].city[j].min,  
+                brazil[i].city[j].max, 
+                brazil[i].city[j].median, 
+                brazil[i].city[j].mean, 
+                brazil[i].city[j].sd
+            );
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_regions(REGIONS *brazil, int R) {
+    for (int i = 0; i < R; i++) {
+        printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", 
+            i, brazil[i].min, 
+            brazil[i].max, 
+            brazil[i].median, 
+            brazil[i].mean, 
+            brazil[i].sd
+        );
+    }
+    printf("\n");
+}
+
 /* Liberando a memória */
 void free_memory(REGIONS *arr, int R, int C, int A) {
     for (int i = 0; i < R; i++) {
@@ -136,8 +162,6 @@ void free_memory(REGIONS *arr, int R, int C, int A) {
 
 /* Cada regiao tem R*C elementos (de 0 até R*c -1) */
 int main() {
-    BEST_REGION best_region;
-
     int R, C, A, seed;
     scanf("%d%d%d%d", &R, &C, &A, &seed); 
     
@@ -165,21 +189,16 @@ int main() {
 
             brazil[i].city[j].mean = mean(brazil[i].city[j].grade_frequencies, A);
             brazil[i].city[j].sd = standard_deviation(brazil[i].city[j].grade_frequencies, brazil[i].city[j].mean, A);
-
-            /* GARANTIR ORDEM */
-            printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, j, brazil[i].city[j].min, brazil[i].city[j].max, brazil[i].city[j].median, brazil[i].city[j].mean, brazil[i].city[j].sd);
         }
-        printf("\n");
     }
     
-    /* Print por regiao */
-    printf("\n");
-    
+    print_cities(brazil, R, C);
+
     /* https://stackoverflow.com/questions/66664531/reducing-the-max-value-and-saving-its-index */
-    #pragma omp declare reduction(maximo : struct _best_city : omp_out = omp_in.mean > omp_out.mean ? omp_in : omp_out)
+    #pragma omp declare reduction(best_city : struct _best_city : omp_out = omp_in.mean > omp_out.mean ? omp_in : omp_out)
     BEST_CITY best_city;
 
-    #pragma omp parallel reduction(maximo: best_city)
+    #pragma omp parallel reduction(best_city: best_city)
     for (int i = 0; i < R; i++) {
         #pragma omp parallel for  
         for (int j = 0; j < C; j++) {
@@ -190,20 +209,21 @@ int main() {
             }     
         } 
     }  
+    
+    /* Print por regiao */
+    printf("\n");
 
-    best_city.mean = 0;    
-    #pragma omp parallel 
+    #pragma omp parallel for
     for (int i = 0; i < R; i++) {
         int *g_freq = brazil[i].grade_frequencies;
         #pragma omp parallel for reduction(+: g_freq[:BUCKET_LEN]) 
         for (int j = 0; j < C; j++) {
-            
-            #pragma omp parallel for 
             for (int k = 0; k < BUCKET_LEN; k++)
                 g_freq[k] += brazil[i].city[j].grade_frequencies[k];    
         } 
 
         double mean = 0;
+        best_city.mean = 0;    
         #pragma omp parallel for reduction(+: mean) 
         for (int j = 0; j < C; j++) 
             mean += brazil[i].city[j].mean;
@@ -220,17 +240,26 @@ int main() {
 
         sort_from_bucket(grades, brazil[i].grade_frequencies, s_pos, e_pos);
 
-        int min = grades[region_start], max = grades[region_end];
-        double median = grades_median(grades, region_start, C*A);            
-        double sd = standard_deviation(brazil[i].grade_frequencies, brazil[i].mean, C*A);
-
-        /* GARANTIR ORDEM */
-        printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, min, max, median, brazil[i].mean, sd);
+        brazil[i].min = grades[region_start];
+        brazil[i].max = grades[region_end];
+        brazil[i].median = grades_median(grades, region_start, C*A);            
+        brazil[i].sd = standard_deviation(brazil[i].grade_frequencies, brazil[i].mean, C*A);
     }  
-    
+
+    #pragma omp declare reduction(best_region : struct _best_region : omp_out = omp_in.mean > omp_out.mean ? omp_in : omp_out)
+    BEST_REGION best_region;
+
+    #pragma omp parallel reduction(best_region: best_region)
+    for (int i = 0; i < R; i++) {
+        if (brazil[i].mean > best_region.mean) {
+            best_region.r_idx = i;
+            best_region.mean = brazil[i].mean;
+        }   
+    }  
+
+    print_regions(brazil, R);
 
     /* Print do Brasil */
-    printf("\n");
     double mean = 0;
     int bucket[BUCKET_LEN] = {0};
     #pragma omp parallel reduction(+: bucket[:BUCKET_LEN])
@@ -260,9 +289,9 @@ int main() {
     printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f", min, max, median, mean, sd);
 
     /* Melhor cidade e melhor regiao */
-    printf("\n\n");
+    printf("\n");
+    printf("Melhor região: Região %d\n", best_region.r_idx);
     printf("Melhor cidade: Região %d, Cidade %d\n", best_city.r_idx, best_city.c_idx);
-    // printf("Melhor região: Região %.0f\nMelhor cidade: Região %.0f, Cidade %.0f\n", best_region[0], best_city[0], best_city[1]);
 
     free_memory(brazil, R, C, A);
     free(grades);
