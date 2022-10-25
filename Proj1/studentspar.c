@@ -178,62 +178,56 @@ int main() {
     /* https://stackoverflow.com/questions/66664531/reducing-the-max-value-and-saving-its-index */
     #pragma omp declare reduction(maximo : struct _best_city : omp_out = omp_in.mean > omp_out.mean ? omp_in : omp_out)
     BEST_CITY best_city;
-    best_city.mean = 0;
-    printf("MEDIA DA CIDADE: %f\n", best_city.mean);
-    #pragma omp sections 
-    {
-        #pragma omp section
-        #pragma omp parallel 
-        for (int i = 0; i < R; i++) {
-            int *g_freq = brazil[i].grade_frequencies;
-            #pragma omp parallel for reduction(+: g_freq[:BUCKET_LEN]) 
-            for (int j = 0; j < C; j++) {
-                
-                #pragma omp parallel for 
-                for (int k = 0; k < BUCKET_LEN; k++)
-                    g_freq[k] += brazil[i].city[j].grade_frequencies[k];    
-            } 
 
-            double mean = 0;
-            #pragma omp parallel for reduction(+: mean) 
-            for (int j = 0; j < C; j++) 
-                mean += brazil[i].city[j].mean;
-            brazil[i].mean = mean / C;
+    #pragma omp parallel reduction(maximo: best_city)
+    for (int i = 0; i < R; i++) {
+        #pragma omp parallel for  
+        for (int j = 0; j < C; j++) {
+            if (brazil[i].city[j].mean > best_city.mean) {
+                best_city.r_idx = i;
+                best_city.c_idx = j;
+                best_city.mean = brazil[i].city[j].mean;
+            }     
+        } 
+    }  
 
-            int region_start = i * C * A, region_end = region_start - 1 + (C * A);
+    best_city.mean = 0;    
+    #pragma omp parallel 
+    for (int i = 0; i < R; i++) {
+        int *g_freq = brazil[i].grade_frequencies;
+        #pragma omp parallel for reduction(+: g_freq[:BUCKET_LEN]) 
+        for (int j = 0; j < C; j++) {
+            
+            #pragma omp parallel for 
+            for (int k = 0; k < BUCKET_LEN; k++)
+                g_freq[k] += brazil[i].city[j].grade_frequencies[k];    
+        } 
 
-            /* Definindo as posições de inserção ordenada */
-            int s_pos[BUCKET_LEN] = {region_start}, e_pos[BUCKET_LEN] = { region_start + brazil[i].grade_frequencies[0] };
-            for (int j = 1; j < BUCKET_LEN; j++) {
-                e_pos[j] = e_pos[j-1] + brazil[i].grade_frequencies[j];
-                s_pos[j] = e_pos[j-1];
-            }
+        double mean = 0;
+        #pragma omp parallel for reduction(+: mean) 
+        for (int j = 0; j < C; j++) 
+            mean += brazil[i].city[j].mean;
+        brazil[i].mean = mean / C;
 
-            sort_from_bucket(grades, brazil[i].grade_frequencies, s_pos, e_pos);
+        int region_start = i * C * A, region_end = region_start - 1 + (C * A);
 
-            int min = grades[region_start], max = grades[region_end];
-            double median = grades_median(grades, region_start, C*A);            
-            double sd = standard_deviation(brazil[i].grade_frequencies, brazil[i].mean, C*A);
-
-            /* GARANTIR ORDEM */
-            printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, min, max, median, brazil[i].mean, sd);
-        }  
-
-        #pragma omp section
-        {
-            #pragma omp parallel reduction(maximo: best_city)
-            for (int i = 0; i < R; i++) {
-                #pragma omp parallel for  
-                for (int j = 0; j < C; j++) {
-                   if (brazil[i].city[j].mean > best_city.mean) {
-                        best_city.r_idx = i;
-                        best_city.c_idx = j;
-                        best_city.mean = brazil[i].city[j].mean;
-                    }     
-                } 
-            }  
+        /* Definindo as posições de inserção ordenada */
+        int s_pos[BUCKET_LEN] = {region_start}, e_pos[BUCKET_LEN] = { region_start + brazil[i].grade_frequencies[0] };
+        for (int j = 1; j < BUCKET_LEN; j++) {
+            e_pos[j] = e_pos[j-1] + brazil[i].grade_frequencies[j];
+            s_pos[j] = e_pos[j-1];
         }
-    }
+
+        sort_from_bucket(grades, brazil[i].grade_frequencies, s_pos, e_pos);
+
+        int min = grades[region_start], max = grades[region_end];
+        double median = grades_median(grades, region_start, C*A);            
+        double sd = standard_deviation(brazil[i].grade_frequencies, brazil[i].mean, C*A);
+
+        /* GARANTIR ORDEM */
+        printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n", i, min, max, median, brazil[i].mean, sd);
+    }  
+    
 
     /* Print do Brasil */
     printf("\n");
