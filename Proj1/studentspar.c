@@ -38,8 +38,8 @@ void get_grades(int *grades, int R, int C, int A, int seed) {
 }
 
 /* Counting Sort */
-void counting_sort(int *grade, int *bucket, int start, int end, int A, int C, int R) {
-
+void counting_sort(int *grade, int *bucket, int start, int end) {
+    #pragma omp parallel for reduction(+:bucket[:BUCKET_LEN])
     for (int i = start; i <= end; i++) {
         bucket[grade[i]]++;
     }
@@ -61,7 +61,7 @@ void counting_sort(int *grade, int *bucket, int start, int end, int A, int C, in
 
 void sort_from_bucket(int *grade, int *bucket, int *s_pos, int *e_pos) {
     int i;
-    #pragma omp parallel for private(i)     
+    #pragma omp parallel for private(i) num_threads(4) 
     for (i = 0; i < BUCKET_LEN; i++) {
         int j;
         #pragma omp simd private(j) 
@@ -75,6 +75,7 @@ double mean(int *grade_freq, int num_of_elems) {
     double mean = 0;
     int i;
 
+    #pragma omp simd reduction(+: mean)
     for (i = 0; i < BUCKET_LEN; i++)
         mean += grade_freq[i] * i;
     
@@ -84,6 +85,7 @@ double mean(int *grade_freq, int num_of_elems) {
 /* frequencia * (nota - media)^2 */
 double standard_deviation(int *bucket, double mean, int num_of_elems) {
     double sum = 0;
+    #pragma omp simd reduction(+:sum)
     for (int i = 0; i < BUCKET_LEN; i++){
         double temp = i - mean;
         sum += bucket[i] * (temp * temp);
@@ -164,12 +166,9 @@ int main() {
     int *grades = malloc(sizeof(int) *  R * C * A);
     get_grades(grades, R, C, A, seed);
 
-    /* Configurando fors aninhados */
-    omp_set_nested(1);
-
     /* Prints por cidade de regiao */
     REGIONS *brazil = initialize_regions(R, C);
-    
+
     double par_start = omp_get_wtime();
     #pragma omp parallel for
     for (int i = 0; i < R; i++) {
@@ -178,7 +177,7 @@ int main() {
         for (int j = 0; j < C; j++) {
             // (i * C * A) + (j * A) = primeira pos da regiao + primeira posicao da cidade dentro da regiao
             int region_start = (i * A * C) + (j * A); 
-            counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1, A, C, R);
+		    counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1);
 
             brazil[i].city[j].min = grades[region_start];
             brazil[i].city[j].max = grades[region_start + A - 1];
@@ -237,7 +236,7 @@ int main() {
             e_pos[j] = e_pos[j-1] + brazil[i].grade_frequencies[j];
             s_pos[j] = e_pos[j-1];
         }
-
+        
         sort_from_bucket(grades, brazil[i].grade_frequencies, s_pos, e_pos);
 
         brazil[i].min = grades[region_start];
