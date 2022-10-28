@@ -204,8 +204,8 @@ int main() {
 
     double seq_end = omp_get_wtime();
     
-    // print_cities(brazil, R, C);
-    // print_regions(brazil, R);
+    print_cities(brazil, R, C);
+    print_regions(brazil, R);
 
     printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n\n", min, max, median, mean, sd);
 

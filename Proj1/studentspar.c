@@ -52,7 +52,6 @@ void counting_sort(int *grade, int *bucket, int start, int end) {
     
     for (int i = 0; i < BUCKET_LEN; i++) {
         int j;
-        #pragma omp simd private(j) 
         for (j = s_pos[i]; j < e_pos[i]; j++)
             grade[j] = i;
     }
@@ -64,7 +63,6 @@ void sort_from_bucket(int *grade, int *bucket, int *s_pos, int *e_pos) {
     #pragma omp parallel for private(i) num_threads(4) 
     for (i = 0; i < BUCKET_LEN; i++) {
         int j;
-        #pragma omp simd private(j) 
         for (j = s_pos[i]; j < e_pos[i]; j++)
             grade[j] = i;
     }
@@ -75,7 +73,6 @@ double mean(int *grade_freq, int num_of_elems) {
     double mean = 0;
     int i;
 
-    #pragma omp simd reduction(+: mean)
     for (i = 0; i < BUCKET_LEN; i++)
         mean += grade_freq[i] * i;
     
@@ -85,7 +82,6 @@ double mean(int *grade_freq, int num_of_elems) {
 /* frequencia * (nota - media)^2 */
 double standard_deviation(int *bucket, double mean, int num_of_elems) {
     double sum = 0;
-    #pragma omp simd reduction(+:sum)
     for (int i = 0; i < BUCKET_LEN; i++){
         double temp = i - mean;
         sum += bucket[i] * (temp * temp);
@@ -285,8 +281,8 @@ int main() {
 
     double par_end = omp_get_wtime();
 
-    // print_cities(brazil, R, C);
-    // print_regions(brazil, R);
+    print_cities(brazil, R, C);
+    print_regions(brazil, R);
 
     printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n\n", min, max, median, mean, sd);
 
