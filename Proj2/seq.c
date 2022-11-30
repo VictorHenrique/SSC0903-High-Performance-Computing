@@ -12,7 +12,6 @@ typedef struct _best_path{
     int *path, cost;
 } BEST_PATH;
 
-
 int factorial(int n) {
     int res = 1;
     for (int i = n; i > 0; i--) res *= i;
