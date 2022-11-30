@@ -39,7 +39,7 @@ void get_grades(int *grades, int R, int C, int A, int seed) {
 
 /* Counting Sort */
 void counting_sort(int *grade, int *bucket, int start, int end) {
-
+    #pragma omp parallel for reduction(+:bucket[:BUCKET_LEN])
     for (int i = start; i <= end; i++) {
         bucket[grade[i]]++;
     }
@@ -52,7 +52,6 @@ void counting_sort(int *grade, int *bucket, int start, int end) {
     
     for (int i = 0; i < BUCKET_LEN; i++) {
         int j;
-        #pragma omp simd private(j) 
         for (j = s_pos[i]; j < e_pos[i]; j++)
             grade[j] = i;
     }
@@ -61,10 +60,9 @@ void counting_sort(int *grade, int *bucket, int start, int end) {
 
 void sort_from_bucket(int *grade, int *bucket, int *s_pos, int *e_pos) {
     int i;
-    #pragma omp parallel for private(i)     
+    #pragma omp parallel for private(i) num_threads(4) 
     for (i = 0; i < BUCKET_LEN; i++) {
         int j;
-        #pragma omp simd private(j) 
         for (j = s_pos[i]; j < e_pos[i]; j++)
             grade[j] = i;
     }
@@ -164,12 +162,9 @@ int main() {
     int *grades = malloc(sizeof(int) *  R * C * A);
     get_grades(grades, R, C, A, seed);
 
-    /* Configurando fors aninhados */
-    omp_set_nested(1);
-
     /* Prints por cidade de regiao */
     REGIONS *brazil = initialize_regions(R, C);
-    
+
     double par_start = omp_get_wtime();
     #pragma omp parallel for
     for (int i = 0; i < R; i++) {
@@ -178,7 +173,8 @@ int main() {
         for (int j = 0; j < C; j++) {
             // (i * C * A) + (j * A) = primeira pos da regiao + primeira posicao da cidade dentro da regiao
             int region_start = (i * A * C) + (j * A); 
-            counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1);
+            
+		        counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1);
 
             brazil[i].city[j].min = grades[region_start];
             brazil[i].city[j].max = grades[region_start + A - 1];
@@ -237,7 +233,7 @@ int main() {
             e_pos[j] = e_pos[j-1] + brazil[i].grade_frequencies[j];
             s_pos[j] = e_pos[j-1];
         }
-
+        
         sort_from_bucket(grades, brazil[i].grade_frequencies, s_pos, e_pos);
 
         brazil[i].min = grades[region_start];
@@ -286,8 +282,8 @@ int main() {
 
     double par_end = omp_get_wtime();
 
-    // print_cities(brazil, R, C);
-    // print_regions(brazil, R);
+    print_cities(brazil, R, C);
+    print_regions(brazil, R);
 
     printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n\n", min, max, median, mean, sd);
 
@@ -295,7 +291,7 @@ int main() {
     printf("Melhor região: Região %d\n", best_region.r_idx);
     printf("Melhor cidade: Região %d, Cidade %d\n", best_city.r_idx, best_city.c_idx);
 
-    printf("Tempo: %fs\n", par_end - par_start);
+    printf("Tempo de resposta sem considerar E/S, em segundos: %.3fs\n", par_end - par_start);
 
     free_memory(brazil, R, C, A);
     free(grades);

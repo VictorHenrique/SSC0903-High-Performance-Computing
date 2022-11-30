@@ -204,8 +204,8 @@ int main() {
 
     double seq_end = omp_get_wtime();
     
-    // print_cities(brazil, R, C);
-    // print_regions(brazil, R);
+    print_cities(brazil, R, C);
+    print_regions(brazil, R);
 
     printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n\n", min, max, median, mean, sd);
 
@@ -213,7 +213,7 @@ int main() {
     printf("Melhor região: Região %.0f\nMelhor cidade: Região %.0f, Cidade %.0f\n", best_region[0], best_city[0], best_city[1]);
 
 
-    printf("Tempo: %fs\n", seq_end - seq_start);
+    printf("Tempo de resposta sem considerar E/S, em segundos: %.3fs\n", seq_end - seq_start);
 
     free_memory(brazil, R, C, A);
     free(grades);
