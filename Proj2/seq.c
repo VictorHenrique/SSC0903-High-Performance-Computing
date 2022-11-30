@@ -80,6 +80,21 @@ int solve_tsp(int *path, int **adj_matrix, int n) {
     return cost;
 }
 
+void free_mem(int **adj_matrix, int *city, int **permutations, int n, int max) {
+    // **adj_matrix
+    for (int i = 0; i < n; i++)
+        free(adj_matrix[i]);
+    free(adj_matrix);
+
+    // *city
+    free(city);
+
+    // **permutations
+    for (int i = 0; i < max; i++)
+        free(permutations[i]);
+    free(permutations);
+}
+
 /* CASO TESTE:
 4
 0 2 5 1
@@ -87,6 +102,14 @@ int solve_tsp(int *path, int **adj_matrix, int n) {
 1 2 0 1
 1 3 4 0
 2
+
+5
+0 2 5 1 12
+7 0 1 3 4
+9 2 0 12 3 
+13 2 8 0 2
+12 1 1 1 0
+0
 */
 int main() {
     int n;
@@ -122,9 +145,9 @@ int main() {
     printf("Best path: ");
     for (int i = 0; i <= n; i++) 
         printf("%d ", route.path[i]);
-    printf("\n");
+    printf("\nCost: %d\n", route.cost);
 
-    printf("Cost: %d\n", route.cost);
+    free_mem(adj_matrix, city, path, n, max);
 
     return 0;
 }
