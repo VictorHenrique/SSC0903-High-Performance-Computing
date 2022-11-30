@@ -173,7 +173,8 @@ int main() {
         for (int j = 0; j < C; j++) {
             // (i * C * A) + (j * A) = primeira pos da regiao + primeira posicao da cidade dentro da regiao
             int region_start = (i * A * C) + (j * A); 
-		    counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1);
+            
+		        counting_sort(grades, brazil[i].city[j].grade_frequencies, region_start, region_start + A - 1);
 
             brazil[i].city[j].min = grades[region_start];
             brazil[i].city[j].max = grades[region_start + A - 1];
