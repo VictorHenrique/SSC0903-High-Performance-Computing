@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <mpi.h>
 #include <omp.h>
 
@@ -46,11 +47,10 @@ void generate_permutations(int *city, int n, int src, int *permutations) {
     // SIMD
     int *base = malloc((n + 1) * sizeof(int));
     base[0] = base[n] = src;
+    
     // SIMD
-    for (int i = 1; i < n; i++) {
-        if (city[i] != src) base[i] = city[i]; 
-        else i--;
-    }
+    for (int i = 0, j = 1; i < n; i++) 
+        if (city[i] != src) base[j++] = city[i]; 
 
     int idx = 0;
     heap_permutation(base, n, permutations, n, &idx);
@@ -60,9 +60,10 @@ void generate_permutations(int *city, int n, int src, int *permutations) {
 
 int *read_adj(int n) {
     int n_sqr = n*n, *adj_matrix = malloc(n_sqr * sizeof(int));
+    printf("\nLendo adj_mat:\n");
     for (int i = 0; i < n_sqr; i++) 
-        scanf("%d", &adj_matrix[i]);
-
+        scanf("%d", &adj_matrix[i]), printf("%d ", adj_matrix[i]);
+    printf("\n");
     return adj_matrix;
 }
 
@@ -74,12 +75,16 @@ int *create_cities(int n) {
     return city;
 }
 
-int get_cost(int *path, int *adj_matrix, int n) {
+int get_cost(int *path, int *adj_matrix, int n, int rank) {
+    // printf("%d recebeu a matriz de adjacencia [%d %d %d %d %d %d %d %d... %d]\n", rank, adj_matrix[0], adj_matrix[1], adj_matrix[2], adj_matrix[3], adj_matrix[4], adj_matrix[5], adj_matrix[6], adj_matrix[7], adj_matrix[(n*n) - 1]);
+    // printf("Fim da mat_adj\n");
     int cost = 0;
     for (int i = 1; i <= n; i++) {
         int row = path[i - 1], col = path[i];
-        cost += adj_matrix[(row * (n+1)) + col];  // equivalente a adj_matrix[i][j] 
+        cost += adj_matrix[row * n + col];  // equivalente a adj_matrix[i][j] 
     }
+    
+    // printf("Caminho [%d %d %d %d %d] possui custo %d\n", path[0], path[1], path[2], path[3], path[4], cost);
 
     return cost;
 }
@@ -97,7 +102,7 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Status status;
     MPI_Request request;
-    BEST_PATH optimal;
+    BEST_PATH optimal = {NULL, INT_MAX};
 
     int rank, nprocs, n, n_paths, max, tag = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -106,7 +111,7 @@ int main(int argc, char *argv[]) {
     int *adj_matrix, *path;
     if (rank == MAIN) {
         int src;
-        scanf("%d%d", &n, &src);
+        scanf("%d", &n);
         MPI_Bcast(&n, 1, MPI_INT, MAIN, MPI_COMM_WORLD);
 
         max = factorial(n-1);
@@ -116,6 +121,7 @@ int main(int argc, char *argv[]) {
         int *city = create_cities(n);
         adj_matrix = read_adj(n);
         
+        scanf("%d", &src);
 
         printf("vai gerar as permutações\n");
         generate_permutations(city, n, src, path);
@@ -136,10 +142,8 @@ int main(int argc, char *argv[]) {
             node_workload *= n+1;
             
             MPI_Isend(path + cur_pos, node_workload, MPI_INT, i, tag, MPI_COMM_WORLD, &request);
+            MPI_Isend(adj_matrix, n*n, MPI_INT, i, tag + 1, MPI_COMM_WORLD, &request);
             
-            
-            /* PORQUE -1???? */
-            MPI_Isend(adj_matrix - 1, n*n, MPI_INT, i, tag + 1, MPI_COMM_WORLD, &request);
             cur_pos += node_workload;
         }   
 
@@ -163,12 +167,12 @@ int main(int argc, char *argv[]) {
 
         adj_matrix = malloc(n*n * sizeof(int));
         MPI_Recv(adj_matrix, n*n, MPI_INT, MAIN, tag + 1, MPI_COMM_WORLD, &status);
-        // printf("%d recebeu a matriz de adjascencia [%d %d %d %d... %d]\n", rank, adj_matrix[0], adj_matrix[1], adj_matrix[2], adj_matrix[3], adj_matrix[(n*n) - 1]);
+        // printf("%d recebeu a matriz de adjacencia [%d %d %d %d %d %d %d %d... %d]\n", rank, adj_matrix[0], adj_matrix[1], adj_matrix[2], adj_matrix[3], adj_matrix[4], adj_matrix[5], adj_matrix[6], adj_matrix[7], adj_matrix[(n*n) - 1]);
     }
 
     for (int i = 0; i < n_paths; i++) {
         int path_start = i * (n+1);
-        int cost = get_cost(&path[path_start], adj_matrix, n);
+        int cost = get_cost(&path[path_start], adj_matrix, n, rank);
         if (optimal.cost > cost) {
             optimal.cost = cost;
             optimal.path = &path[path_start]; 
