@@ -23,21 +23,32 @@ void swap(int *list, int a, int b) {
     list[b] = old_a;
 }
 
+int get_cost(int *path, int *adj_matrix, int n, int rank) {
+    int cost = 0;
+    for (int i = 1; i <= n; i++) {
+        int row = path[i - 1], col = path[i];
+        cost += adj_matrix[row * n + col];  // equivalente a adj_matrix[i][j] 
+    }
+    
+    return cost;
+}
+
 // Permutacao na parte interna
-void heap_permutation(int *base, int size, int *perm, int n, int *idx) {
+void solve_tsp(int *base, int size, BEST_PATH *best_path, int n, int *adj_matrix, int rank) {
     if (n == 1) {
-        // SIMD
-        #pragma omp simd 
-        for (int i = 0; i <= size; i++) 
-            perm[(*idx) * (size+1) + i] = base[i];
-        (*idx)++;
+        int cost = get_cost(base, adj_matrix, size, rank);
+        if (best_path->cost > cost) {
+            best_path->cost = cost;
+            for(int i = 0; i <= size; i++)
+                best_path->path[i] = base[i];
+        }
 
         return;
     }
 
     // SIMD
     for (int i = 1; i < n; i++) {
-        heap_permutation(base, size, perm, n - 1, idx);
+        solve_tsp(base, size, best_path, n - 1, adj_matrix, rank);
         if (n % 2) 
             swap(base, 1, n - 1);
         else    
@@ -45,25 +56,10 @@ void heap_permutation(int *base, int size, int *perm, int n, int *idx) {
     }
 }   
 
-void generate_permutations(int *city, int n, int src, int *permutations) {
-    // SIMD
-    int *base = malloc((n + 1) * sizeof(int));
-    base[0] = base[n] = src;
-    
-    for (int i = 0, j = 1; i < n; i++) 
-        if (city[i] != src) base[j++] = city[i]; 
-
-    int idx = 0;
-    heap_permutation(base, n, permutations, n, &idx);
-
-    free(base);
-}
-
-int *read_adj(int n) {
-    int n_sqr = n*n, *adj_matrix = malloc(n_sqr * sizeof(int));
+void read_adj(int *adj_matrix, int n) {
+    int n_sqr = n*n;
     for (int i = 0; i < n_sqr; i++) 
         scanf("%d", &adj_matrix[i]);
-    return adj_matrix;
 }
 
 int *create_cities(int n) {
@@ -74,15 +70,19 @@ int *create_cities(int n) {
     return city;
 }
 
-int get_cost(int *path, int *adj_matrix, int n, int rank) {
-    int cost = 0;
-    // #pragma omp simd reduction(+: cost)
-    for (int i = 1; i <= n; i++) {
-        int row = path[i - 1], col = path[i];
-        cost += adj_matrix[row * n + col];  // equivalente a adj_matrix[i][j] 
+int *create_bases(int n, int src, int *city) {
+    int *base = malloc((n*n - 1) * sizeof(int));
+    for (int i = 0, row = 0; i < n; i++) {
+        if (city[i] == src) continue;
+        
+        int path_start = (row++)*(n+1), path_end = path_start + n;
+        base[path_start] = base[path_end] = src;
+        base[path_end - 1] = city[i];
+        for (int j = 0, k = path_start + 1; j < n; j++)
+            if (city[j] != src && city[j] != city[i]) base[k++] = city[j]; 
     }
-    
-    return cost;
+
+    return base;
 }
 
 int main(int argc, char *argv[]) {
@@ -95,73 +95,69 @@ int main(int argc, char *argv[]) {
 
     double start, end;
 
-    int rank, nprocs, n, n_paths, max, tag = 0;
+    int rank, nprocs, n, bases_per_proc, max, tag = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-    int *adj_matrix, *path;
+    int *adj_matrix, *path, *bases;
     if (rank == MAIN) {
         int src;
         scanf("%d", &n);
         MPI_Bcast(&n, 1, MPI_INT, MAIN, MPI_COMM_WORLD);
-
-        max = factorial(n-1);
-        int arr_length = max * (n+1); 
-        path = malloc(arr_length * sizeof(int));
         
         int *city = create_cities(n);
-        adj_matrix = read_adj(n);
-        
+        adj_matrix = malloc(n*n * sizeof(int));
+        read_adj(adj_matrix, n);
+
         scanf("%d", &src);
 
         start = MPI_Wtime();
-
-        generate_permutations(city, n, src, path);
+        bases = create_bases(n, src, city);
 
         /* Divisão da carga de trabalho */
-        n_paths = max / nprocs;
-        int rem = max % nprocs;
-        int cur_pos = rem ? n_paths + 1: n_paths;
+        bases_per_proc = (n-1) / nprocs;
+        int rem = (n-1) % nprocs;
+        int cur_pos = rem ? bases_per_proc + 1: bases_per_proc;
         cur_pos *= n + 1;
         for (int i = 1; i < nprocs; i++) {
-            int node_workload = i < rem ? n_paths + 1 : n_paths;
+            int node_workload = i < rem ? bases_per_proc + 1 : bases_per_proc;
             node_workload *= n+1;
-            
-            MPI_Isend(path + cur_pos, node_workload, MPI_INT, i, tag, MPI_COMM_WORLD, &request);
+
+            MPI_Isend(bases + cur_pos, node_workload, MPI_INT, i, tag, MPI_COMM_WORLD, &request);
             MPI_Isend(adj_matrix, n*n, MPI_INT, i, tag + 1, MPI_COMM_WORLD, &request);
             
             cur_pos += node_workload;
         }   
 
+        if (rem) bases_per_proc++;
+
         free(city);
     } else {
         MPI_Bcast(&n, 1, MPI_INT, MAIN, MPI_COMM_WORLD);
-        int max = factorial(n-1), rem = max % nprocs;
+        int max = factorial(n-1), rem = (n-1) % nprocs;
 
-        n_paths = max / nprocs;
+        bases_per_proc = (n-1) / nprocs;
         if (rank < rem) 
-            n_paths++;
+            bases_per_proc++;
 
-        int arr_length = n_paths * (n + 1);
-        path = malloc(arr_length * sizeof(int));
-
-        MPI_Recv(path, arr_length, MPI_INT, MAIN, tag, MPI_COMM_WORLD, &status);
+        int bases_length = bases_per_proc * (n + 1);
+        bases = malloc(bases_length * sizeof(int));
+        MPI_Recv(bases, bases_length, MPI_INT, MAIN, tag, MPI_COMM_WORLD, &status);
 
         adj_matrix = malloc(n*n * sizeof(int));
         MPI_Recv(adj_matrix, n*n, MPI_INT, MAIN, tag + 1, MPI_COMM_WORLD, &status);
     }
+    
+    /* Gerando as permutacoes */
+    int num_of_perms = factorial(n-2), arr_length = bases_per_proc * num_of_perms * (n+1);
+    optimal.path = malloc((n+1) * sizeof(int));
 
-    // #pragma omp declare reduction(best_path : struct _best_path : omp_out = omp_in.cost > omp_out.cost ? omp_in : omp_out)
-    // #pragma omp simd reduction(best_path: optimal)
-    for (int i = 0; i < n_paths; i++) {
-        int path_start = i * (n+1);
-        int cost = get_cost(&path[path_start], adj_matrix, n, rank);
-        if (optimal.cost > cost) {
-            optimal.cost = cost;
-            optimal.path = &path[path_start]; 
-        }
-    }
-
+    /* Cada nó recebeu  *bases_per_proc* bases, cada uma gerando (n-2) 
+      permutacoes, que são arrays de tamanho n+1  */
+    path = malloc(arr_length * sizeof(int));
+    for (int i = 0; i < bases_per_proc; i++) 
+        solve_tsp(&bases[i*(n+1)], n, &optimal, n-1, adj_matrix, rank);
+    
     if (rank == MAIN) {
         int *cost = malloc(nprocs * sizeof(int));
         int **proc_path = malloc(nprocs * sizeof(int *));
@@ -174,7 +170,9 @@ int main(int argc, char *argv[]) {
         for (int i = 1; i < nprocs; i++) {
             if (cost[i] < optimal.cost) {
                 optimal.cost = cost[i];
-                optimal.path = proc_path[i];
+
+                for (int j = 0; j <= n; j++)
+                    optimal.path[j] = proc_path[i][j];
             }
         }
         
@@ -197,7 +195,8 @@ int main(int argc, char *argv[]) {
         MPI_Send(optimal.path, n+1, MPI_INT, MAIN, tag, MPI_COMM_WORLD);
     }
 
-    free(path), free(adj_matrix);
+    
+    free(optimal.path), free(adj_matrix), free(path), free(bases);
     MPI_Finalize();
 
     return 0;
