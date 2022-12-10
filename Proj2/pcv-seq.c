@@ -67,26 +67,30 @@ void free_mem(int **adj_matrix, int *city, int n, int max, BEST_PATH optimal) {
     free(city), free(optimal.path);
 }
 
-int main() {
-    int n;
-    scanf("%d", &n);
+int main(int argc, char *argv[]) {
+    int n, seed = 12;
+    if (argc > 2) return 1;
+    else n = atoi(argv[1]);
+    srand(seed);
 
+    int **adj_matrix = malloc(n * sizeof(int *));
+    for (int i = 0, j = 0; i < n; i++) {
+        adj_matrix[i] = malloc(n * sizeof(int));
+        for (int j = 0; j < n; j++) {
+            if (j == i) {
+                adj_matrix[i][j] = 0;
+            } else {
+                adj_matrix[i][j] = rand() % 100;
+                if (adj_matrix[i][j] == 0) adj_matrix[i][j] = (n+1) * 101;  // custo "infinito" -> suficiente para descartar o caminho
+            }
+        }
+    }
+    
     int *city = malloc(n * sizeof(int));
     for (int i = 0; i < n; i++) 
         city[i] = i;
 
-    int **adj_matrix = malloc(n * sizeof(int *));
-    for (int i = 0; i < n; i++) {
-        adj_matrix[i] = malloc(n * sizeof(int));
-        
-        adj_matrix[i][i] = 0;
-        for (int j = 0; j < n; j++) 
-            scanf("%d", &adj_matrix[i][j]);
-    }
-
-    int src, max = factorial(n-1); 
-    scanf("%d", &src);
-
+    int src = 0, max = factorial(n-1); 
     double seq_start = omp_get_wtime();
     
     BEST_PATH route = {malloc((n+1) * sizeof(int)), INT_MAX};
@@ -100,7 +104,6 @@ int main() {
     printf("\nCost: %d\n", route.cost);
     
     printf("Tempo de resposta sem considerar E/S, em segundos: %.3fs\n", seq_end - seq_start);
-    
     free_mem(adj_matrix, city, n, max, route);
 
     return 0;
