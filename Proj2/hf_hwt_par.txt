@@ -1,0 +1,150 @@
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.045s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.057s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.058s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.050s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.049s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.048s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.054s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.049s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.042s
+Best path: 0 4 1 7 5 8 6 3 10 2 9 0 
+Cost: 217
+Tempo de resposta sem considerar E/S, em segundos: 0.052s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.075s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.068s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.071s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.071s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.069s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.080s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.073s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.076s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.070s
+Best path: 0 4 2 1 6 10 11 8 5 7 9 3 0 
+Cost: 152
+Tempo de resposta sem considerar E/S, em segundos: 0.081s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.401s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.361s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.340s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.347s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.373s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.355s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.372s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.391s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.383s
+Best path: 0 2 7 1 5 3 11 9 8 4 10 6 12 0 
+Cost: 164
+Tempo de resposta sem considerar E/S, em segundos: 0.442s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.256s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.329s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.350s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.313s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.256s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.253s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.070s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.092s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 4.104s
+Best path: 0 4 6 8 11 2 7 10 12 9 13 5 1 3 0 
+Cost: 157
+Tempo de resposta sem considerar E/S, em segundos: 3.984s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 66.492s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 64.097s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 56.445s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 67.442s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 66.040s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 65.676s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 76.731s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 59.312s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 73.661s
+Best path: 0 7 4 8 9 3 5 11 10 14 2 12 6 1 13 0 
+Cost: 200
+Tempo de resposta sem considerar E/S, em segundos: 57.289s
